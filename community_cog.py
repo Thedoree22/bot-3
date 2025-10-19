@@ -16,7 +16,6 @@ AUTOROLE_DB = "autorole_data.json"
 def load_data(file):
     if not os.path.exists(file): return {}
     try:
-        # ვიყენებთ utf-8 კოდირებას ქართული სიმბოლოებისთვის JSON-ში
         with open(file, "r", encoding='utf-8') as f:
             return json.load(f)
     except (json.JSONDecodeError, FileNotFoundError):
@@ -24,7 +23,6 @@ def load_data(file):
 
 def save_data(data, file):
     try:
-        # ვიყენებთ utf-8 კოდირებას და ensure_ascii=False
         with open(file, "w", encoding='utf-8') as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
     except Exception as e:
@@ -39,9 +37,7 @@ class CommunityCog(commands.Cog):
     def draw_text_with_shadow(self, draw, xy, text, font, fill_color, shadow_color=(0, 0, 0, 150), shadow_offset=(2, 2)):
         x, y = xy
         sx, sy = shadow_offset
-        # ვხატავთ ჩრდილს
         draw.text((x + sx, y + sy), text, font=font, fill=shadow_color, anchor="lt")
-        # ვხატავთ მთავარ ტექსტს ზემოდან
         draw.text(xy, text, font=font, fill=fill_color, anchor="lt")
 
     # --- Welcome/Leave სურათის გენერირების ფუნქცია (მწვანე ფონი) ---
@@ -50,10 +46,8 @@ class CommunityCog(commands.Cog):
             W, H = (1000, 400) # სურათის ზომა
 
             # ფონი: მწვანე-შავი გრადიენტი + ვარსკვლავები
-            img = Image.new("RGBA", (W, H))
-            draw = ImageDraw.Draw(img)
-            start_color = (0, 70, 20) # მუქი მწვანე
-            end_color = (0, 0, 0)     # შავი
+            img = Image.new("RGBA", (W, H)); draw = ImageDraw.Draw(img)
+            start_color = (0, 70, 20); end_color = (0, 0, 0)
             for i in range(H):
                 ratio=i/H; r=int(start_color[0]*(1-ratio)+end_color[0]*ratio); g=int(start_color[1]*(1-ratio)+end_color[1]*ratio); b=int(start_color[2]*(1-ratio)+end_color[2]*ratio)
                 draw.line([(0,i),(W,i)], fill=(r,g,b))
@@ -63,8 +57,7 @@ class CommunityCog(commands.Cog):
                 draw.ellipse([(x,y),(x+size,y+size)], fill=star_color)
 
             # ავატარი
-            AVATAR_SIZE = 180
-            avatar_pos = (80, (H // 2) - (AVATAR_SIZE // 2))
+            AVATAR_SIZE = 180; avatar_pos = (80, (H // 2) - (AVATAR_SIZE // 2))
             if avatar_url:
                 try:
                     response = requests.get(avatar_url, timeout=10); response.raise_for_status()
@@ -79,15 +72,10 @@ class CommunityCog(commands.Cog):
             # ტექსტის დამატება
             draw = ImageDraw.Draw(img)
             try:
-                font_regular_path = "NotoSansGeorgian-Regular.ttf"
-                font_bold_path = "NotoSansGeorgian-Bold.ttf"
-                if not os.path.exists(font_regular_path) or not os.path.exists(font_bold_path):
-                     print("!!! ფონტები ვერ მოიძებნა GitHub-ზე !!!"); return None
-
-                font_regular = ImageFont.truetype(font_regular_path, 50)
-                font_bold = ImageFont.truetype(font_bold_path, 65)
-                font_server = ImageFont.truetype(font_regular_path, 40)
-            except IOError as e: print(f"ფონტის ჩატვირთვის შეცდომა: {e}"); return None
+                font_regular = ImageFont.truetype("NotoSansGeorgian-Regular.ttf", 50)
+                font_bold = ImageFont.truetype("NotoSansGeorgian-Bold.ttf", 65)
+                font_server = ImageFont.truetype("NotoSansGeorgian-Regular.ttf", 40)
+            except IOError: print("!!! ფონტები ვერ მოიძებნა !!!"); return None
 
             text_x = avatar_pos[0] + AVATAR_SIZE + 50
             user_name = member_name
@@ -146,13 +134,13 @@ class CommunityCog(commands.Cog):
         # მისალმების გაგზავნა
         welcome_data = load_data(WELCOME_DB)
         if guild_id in welcome_data:
-            channel_id = welcome_data[guild_id].get("channel_id")
-            channel = member.guild.get_channel(channel_id)
+            channel_id = welcome_data[guild_id].get("channel_id"); channel = member.guild.get_channel(channel_id)
             if channel:
                 welcome_file = await self.create_join_leave_image(member.name, member.guild.name, member.avatar.url if member.avatar else None, "join")
                 if welcome_file: await channel.send(f"შემოგვიერთდა {member.mention} გთხოვ გაერთო", file=welcome_file)
                 else: await channel.send(f"შემოგვიერთდა {member.mention} გთხოვ გაერთო")
 
+    # --- on_member_remove ფუნქცია (აქ იყო შეცდომა 144 ხაზთან) ---
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
         guild_id = str(member.guild.id)
@@ -162,9 +150,17 @@ class CommunityCog(commands.Cog):
             channel_id = welcome_data[guild_id].get("channel_id")
             channel = member.guild.get_channel(channel_id)
             if channel:
-                leave_file = await self.create_join_leave_image(member.name, member.guild.name, member.avatar.url if member.avatar else None, "leave")
+                # ვიძახებთ იგივე ფუნქციას, ოღონდ mode="leave"
+                leave_file = await self.create_join_leave_image(
+                    member_name=member.name,
+                    guild_name=member.guild.name,
+                    avatar_url=member.avatar.url if member.avatar else None, # ვიყენებთ დეფოლტ ავატარსაც
+                    mode="leave" # აქ ვუთითებთ რომ გასვლის სურათი გვინდა
+                )
                 if leave_file:
-                    await channel.send(file=leave_file) # ვაგზავნით მხოლოდ სურათს
+                    # ვაგზავნით მხოლოდ სურათს
+                    await channel.send(file=leave_file)
+                # ტექსტს ცალკე აღარ ვაგზავნით
 
 # --- Cog-ის ჩატვირთვის ფუნქცია ---
 async def setup(bot: commands.Bot):
