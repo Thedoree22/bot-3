@@ -129,7 +129,9 @@ class CommunityCog(commands.Cog):
         autorole_data = load_data(AUTOROLE_DB)
         if guild_id in autorole_data:
             role_id = autorole_data[guild_id].get("role_id"); role = member.guild.get_role(role_id)
-            if role: try: await member.add_roles(role) except Exception as e: print(f"Error adding role: {e}")
+            if role:
+                try: await member.add_roles(role)
+                except Exception as e: print(f"Error adding role: {e}")
 
         # მისალმების გაგზავნა
         welcome_data = load_data(WELCOME_DB)
@@ -140,11 +142,10 @@ class CommunityCog(commands.Cog):
                 if welcome_file: await channel.send(f"შემოგვიერთდა {member.mention} გთხოვ გაერთო", file=welcome_file)
                 else: await channel.send(f"შემოგვიერთდა {member.mention} გთხოვ გაერთო")
 
-    # --- on_member_remove ფუნქცია (აქ იყო შეცდომა 144 ხაზთან) ---
-    @commands.Cog.listener()
+    # --- on_member_remove ფუნქცია (ყურადღებით გადამოწმებული) ---
+    @commands.Cog.listener() # დარწმუნდი რომ ეს ხაზი იწყება დასაწყისიდან (0 indentation)
     async def on_member_remove(self, member: discord.Member):
         guild_id = str(member.guild.id)
-        # გაცილების გაგზავნა
         welcome_data = load_data(WELCOME_DB) # ვიყენებთ იგივე მონაცემთა ბაზას
         if guild_id in welcome_data:
             channel_id = welcome_data[guild_id].get("channel_id")
@@ -154,13 +155,18 @@ class CommunityCog(commands.Cog):
                 leave_file = await self.create_join_leave_image(
                     member_name=member.name,
                     guild_name=member.guild.name,
-                    avatar_url=member.avatar.url if member.avatar else None, # ვიყენებთ დეფოლტ ავატარსაც
+                    avatar_url=member.avatar.url if member.avatar else None,
                     mode="leave" # აქ ვუთითებთ რომ გასვლის სურათი გვინდა
-                )
+                ) # ფრჩხილი იხურება აქ
                 if leave_file:
-                    # ვაგზავნით მხოლოდ სურათს
-                    await channel.send(file=leave_file)
-                # ტექსტს ცალკე აღარ ვაგზავნით
+                    try: # დავამატეთ try-except ბლოკი გაგზავნისთვისაც
+                        await channel.send(file=leave_file) # ვაგზავნით მხოლოდ სურათს
+                    except Exception as e:
+                        print(f"Leave შეტყობინების გაგზავნის შეცდომა: {e}")
+            # else: # ეს else ბლოკი აქ არ არის საჭირო
+            #     print(f"Leave არხი ვერ მოიძებნა: {channel_id}") # (სურვილისამებრ შეგიძლია დატოვო დიაგნოსტიკისთვის)
+        # else: # ეს else ბლოკი აქ არ არის საჭირო
+        #     pass # ამ სერვერზე welcome/leave არ არის დაყენებული
 
 # --- Cog-ის ჩატვირთვის ფუნქცია ---
 async def setup(bot: commands.Bot):
