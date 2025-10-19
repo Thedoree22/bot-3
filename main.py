@@ -8,10 +8,9 @@ if BOT_TOKEN is None:
     exit()
 
 # --- ბოტის უფლებები (Intents) ---
-# დავიწყოთ მინიმალური უფლებებით. შეგვიძლია მოგვიანებით დავამატოთ, თუ საჭირო იქნება.
 intents = discord.Intents.default()
-# intents.members = True # ჩართე, თუ Welcome/AutoRole დაგჭირდება
-# intents.message_content = True # ჩართე, თუ შეტყობინებების წაკითხვა დაგჭირდება
+intents.members = True       # აუცილებელია Welcome, Leave, Auto-Role-ისთვის
+intents.message_content = True # დავტოვოთ ყოველი შემთხვევისთვის
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -20,31 +19,29 @@ async def on_ready():
     print(f"ბოტი ჩაირთო როგორც {bot.user}")
     print("-" * 30)
 
-    # --- აქ დავამატებთ ფუნქციების (Cogs) ჩატვირთვას, როცა გვეცოდინება, რა ფუნქციები გვინდა ---
-    # cogs_to_load = ['some_cog']
-    # for cog in cogs_to_load:
-    #     try:
-    #         await bot.load_extension(cog)
-    #         print(f"წარმატებით ჩაიტვირთა: {cog}")
-    #     except Exception as e:
-    #         print(f"შეცდომა: ვერ ჩაიტვირთა {cog}: {e}")
-    # print("-" * 30)
+    # --- ყველა ფუნქციის (Cogs) ჩატვირთვა ---
+    cogs_to_load = [
+        'community_cog',      # Welcome, Leave, Auto-Role (ახალი დიზაინით)
+        'youtube_cog',        # YouTube შეტყობინებები
+        'tiktok_cog'          # TikTok შეტყობინებები
+    ]
+
+    for cog in cogs_to_load:
+        try:
+            await bot.load_extension(cog)
+            print(f"წარმატებით ჩაიტვირთა: {cog}")
+        except Exception as e:
+            print(f"შეცდომა: ვერ ჩაიტვირთა {cog}: {e}")
+
+    print("-" * 30)
 
     # --- სლეშ ბრძანებების რეგისტრაცია ---
     try:
-        # თავიდან sync() არ გვჭირდება, რადგან ბრძანებები არ გვაქვს
-        # synced = await bot.tree.sync()
-        # print(f"წარმატებით დარეგისტრირდა {len(synced)} ბრძანება.")
-        print("ბრძანებების რეგისტრაცია გამოტოვებულია (ჯერ ბრძანებები არ არის).")
+        synced = await bot.tree.sync()
+        print(f"წარმატებით დარეგისტრირდა {len(synced)} ბრძანება.")
     except Exception as e:
         print(f"შეცდომა ბრძანებების რეგისტრაციისას: {e}")
-    
-    print("-" * 30)
 
-# ეს არის მარტივი სატესტო ბრძანება
-@bot.tree.command(name="ping", description="ამოწმებს ბოტის პასუხის დროს")
-async def ping(interaction: discord.Interaction):
-    latency = bot.latency * 1000 # მილიწამებში
-    await interaction.response.send_message(f"პონგ! {latency:.2f}ms")
+    print("-" * 30)
 
 bot.run(BOT_TOKEN)
